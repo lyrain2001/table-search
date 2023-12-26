@@ -10,14 +10,15 @@ class QueryExpansion:
         
     def expand(self):
         expanded_queries = []
-        for query in queries:
+        for query in self.query:
             expanded_query = self.expand_query(query)
+            expanded_query = query + " [SEP] " + expanded_query
             expanded_queries.append(expanded_query)
 
         with open('expanded_queries.txt', 'w') as f:
-            for item in expanded_queries:
-                f.write("%s\n" % item)
-        
+            for idx in range(len(expanded_queries)):
+                f.write("%s %s\n" % (idx, expanded_queries[idx]))
+
         
     def num_tokens_from_string(self, string, encoding_name="gpt-3.5-turbo"):
             encoding = tiktoken.encoding_for_model(encoding_name)
@@ -31,19 +32,16 @@ class QueryExpansion:
                 messages=[
                         {
                             "role": "system", 
-                            "content": "You are an assistant for a dataset search engine.\
-                                        Your goal is to increase the performance of this dataset search engine for keyword queries."},
+                            "content": "You are an assistant for expanding queries.\
+                                        Your goal is to provide illustrative details to the following queries to help dataset search."},
                         {
                             "role": "user", 
                             "content": """Instruction:
-    Answer the questions while using the input and context.
-    The input includes dataset title, headers, a random sample, and profiler result of the large dataset.
+    Provide illustrative details to the following query in a single paragraph:
+    Query: demographics of Hungary
+    Answer:  Demographics of Hungary refer to statistical data about the population composition and characteristics of Hungary as a whole and its various regions. This information includes factors such as the total population, population growth or decline, age distribution, gender ratio, ethnic composition, educational attainment, employment rates, and more. It also encompasses trends in population changes over time, migration patterns, and urbanization levels within the country. 
 
-    Input:
-    """ + context + """
-    Question:
-    Describe the dataset covering the nine aspects above in one complete and coherent paragraph.
-
+    Query: """ + context + """
     Answer: """},
                     ],
                 temperature=0.3)
@@ -63,8 +61,10 @@ def main():
 
     query_path = '../GTR/data/wikitables/queries.txt'
     queries = read_query(query_path)
-    print(queries)
     
-    OPENAI_API_KEY = "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"
+    OPENAI_API_KEY = "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"
     generator = QueryExpansion(OPENAI_API_KEY, queries)
-    genertor.expand()
+    generator.expand()
+    
+if __name__ == "__main__":
+    main()

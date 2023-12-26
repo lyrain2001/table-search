@@ -62,7 +62,7 @@ def main():
     query_path = '../GTR/data/wikitables/queries.txt'
     queries = read_query(query_path)
     
-    OPENAI_API_KEY = "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"
+    OPENAI_API_KEY = "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"
     generator = QueryExpansion(OPENAI_API_KEY, queries)
     generator.expand()
     

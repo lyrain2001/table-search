@@ -3,6 +3,7 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 from typing import List
 from collections import defaultdict
+import re
 
 
 def read_tables(file_path):
@@ -14,11 +15,13 @@ def read_query(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
     data = []
+    query_idx = []
     for line in lines:
         parts = line.split(' ', 1)
         if len(parts) == 2:
+            query_idx.append(int(parts[0]))
             data.append(parts[1].strip())  
-    return data
+    return query_idx, data
 
 def read_ground_truth(file_path):
     with open(file_path, 'r') as file:
@@ -35,16 +38,20 @@ def read_ground_truth(file_path):
     return ground_truth
 
 def extract_text_from_table(table):
-    """ Extracts all text content from a table represented as a dictionary. """
+    """ Extracts all text content from a table represented as a dictionary, removing common unexpected NLP symbols. """
     text = []
     for column, values in table.items():
         if isinstance(values, list):
-            text.extend(values)
+            # Process each value in the list
+            for value in values:
+                cleaned_value = re.sub(r'[^\w\s]', '', str(value))  # Remove non-alphanumeric and non-space characters
+                text.append(cleaned_value)
         else:
-            text.append(values)
-    return " ".join(map(str, text))
+            cleaned_value = re.sub(r'[^\w\s]', '', str(values))  # Remove non-alphanumeric and non-space characters
+            text.append(cleaned_value)
+    return " ".join(text)
 
-def rank_tables(query: str, tables: dict) -> List[int]:
+def rank_tables(query: str, corpus, keys) -> List[int]:
     """
     Ranks tables based on the BM25 algorithm given a query and a JSON string of tables.
     
@@ -53,8 +60,6 @@ def rank_tables(query: str, tables: dict) -> List[int]:
     :return: List of indices representing the tables in descending order of relevance.
     """
     # Extract text from each table
-    
-    corpus = [extract_text_from_table(value) for key, value in tables.items()]
 
     # Tokenize the corpus and query
     tokenized_corpus = [doc.split(" ") for doc in corpus]
@@ -67,8 +72,7 @@ def rank_tables(query: str, tables: dict) -> List[int]:
     # Rank the tables based on scores
     ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
     
-    key_list = list(tables.keys())
-    ranked_tables = [key_list[i] for i in ranked]
+    ranked_tables = [keys[i] for i in ranked]
     print(ranked_tables[:10])
 
     return ranked_tables
@@ -108,7 +112,7 @@ def calculate_metrics(query_rankings, ground_truth, cutoffs=[5, 10, 15, 20]):
     average_precisions = []
 
     for query, ranked_tables in query_rankings.items():
-        ground_truth_relevance = [ground_truth[query].get(f"table-{table_id}", 0) for table_id in ranked_tables]
+        ground_truth_relevance = [ground_truth[query].get(table_id, 0) for table_id in ranked_tables]
 
         for k in cutoffs:
             ndcg_score = ndcg_at_k(ground_truth_relevance, k, list(ground_truth[query].values()))
@@ -126,22 +130,21 @@ def calculate_metrics(query_rankings, ground_truth, cutoffs=[5, 10, 15, 20]):
 
 def query(table_path, query_path, qtrels_path):
     tables = read_tables(table_path)
-    queries = read_query(query_path)
+    query_idx, queries = read_query(query_path)
     ground_truth = read_ground_truth(qtrels_path)
+    
+    corpus = [extract_text_from_table(value) for key, value in tables.items()]
     query_rankings = {}
     for idx in range(len(queries)):
-        ranked_tables = rank_tables(queries[idx], tables)
-        query_rankings[str(idx+1)] = ranked_tables
-        # ------------------------------------------------------------
-        break
-        # ------------------------------------------------------------
+        ranked_tables = rank_tables(queries[idx], corpus, list(tables.keys()))
+        query_rankings[str(query_idx[idx])] = ranked_tables
     mean_ndcg_scores, mean_ap = calculate_metrics(query_rankings, ground_truth)
     return mean_ndcg_scores, mean_ap
 
 
 def main(args=None):
     table_path = './wikitables/tables.json'
-    query_path = './wikitables/queries.txt'
+    query_path = './wikitables/expanded_queries.txt'
     qtrels_path = './wikitables/qtrels.txt'
     mean_ndcg_scores, mean_ap = query(table_path, query_path, qtrels_path)
     print(mean_ndcg_scores)

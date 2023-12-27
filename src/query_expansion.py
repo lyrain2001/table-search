@@ -59,7 +59,7 @@ def main():
                 data.append(parts[1].strip())  
         return data
 
-    query_path = '../GTR/data/wikitables/queries.txt'
+    query_path = './wikitables/queries.txt'
     queries = read_query(query_path)
     
     OPENAI_API_KEY = "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"

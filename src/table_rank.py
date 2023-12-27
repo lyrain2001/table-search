@@ -4,6 +4,7 @@ from rank_bm25 import BM25Okapi
 from typing import List
 from collections import defaultdict
 import re
+import argparse
 
 
 def read_tables(file_path):
@@ -143,8 +144,15 @@ def query(table_path, query_path, qtrels_path):
 
 
 def main(args=None):
+    parser = argparse.ArgumentParser(description="Ranking tables based on BM25 algorithm.")
+    parser.add_argument('--expanded', action='store_true', default=False)
+    args = parser.parse_args()
+    if args.expanded:
+        query_path = './wikitables/expanded_queries.txt'
+    else:
+        query_path = './wikitables/queries.txt'
+        
     table_path = './wikitables/tables.json'
-    query_path = './wikitables/expanded_queries.txt'
     qtrels_path = './wikitables/qtrels.txt'
     mean_ndcg_scores, mean_ap = query(table_path, query_path, qtrels_path)
     print(mean_ndcg_scores)

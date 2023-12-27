@@ -8,6 +8,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+import argparse
 
 
 
@@ -150,9 +151,16 @@ def query(description_path, query_path, qtrels_path):
     return mean_ndcg_scores, mean_ap
 
 
-def main(args=None):
+def main():
+    parser = argparse.ArgumentParser(description="Ranking tables based on BM25 algorithm.")
+    parser.add_argument('--expanded', action='store_true', default=False)
+    args = parser.parse_args()
+    if args.expanded:
+        query_path = './wikitables/expanded_queries.txt'
+    else:
+        query_path = './wikitables/queries.txt'
+    
     description_path = './wikitables/descriptions.json'
-    query_path = './wikitables/queries.txt'
     qtrels_path = './wikitables/qtrels.txt'
     mean_ndcg_scores, mean_ap = query(description_path, query_path, qtrels_path)
     print(mean_ndcg_scores)
